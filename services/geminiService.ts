@@ -25,8 +25,7 @@ const getSystemPrompt = () => {
 
 const callMistral = async (prompt: string, chatContext: string) => {
   // Mistral Integration via Standard-Fetch (OpenAI-kompatibel)
-  // Wir nutzen hier beispielhaft den API_KEY, idealerweise gäbe es einen separaten MISTRAL_API_KEY
-  const apiKey = process.env.API_KEY; 
+  const apiKey = process.env.MISTRAL_API_KEY || process.env.API_KEY; 
   const endpoint = "https://api.mistral.ai/v1/chat/completions";
 
   const response = await fetch(endpoint, {

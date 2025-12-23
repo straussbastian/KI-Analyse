@@ -46,7 +46,7 @@ echo "GEMINI_API_KEY=dein_api_key" > .env.local
 docker-compose up -d
 ```
 
-Die App läuft dann auf [http://localhost:8080](http://localhost:8080)
+Die App läuft dann auf [http://localhost:8095](http://localhost:8095)
 
 ### Manueller Docker Build
 

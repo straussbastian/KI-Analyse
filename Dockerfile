@@ -3,9 +3,11 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Build argument for API key
+# Build arguments for API keys
 ARG GEMINI_API_KEY
+ARG MISTRAL_API_KEY
 ENV GEMINI_API_KEY=$GEMINI_API_KEY
+ENV MISTRAL_API_KEY=$MISTRAL_API_KEY
 
 COPY package*.json ./
 RUN npm ci
