@@ -1,0 +1,17 @@
+# Coolify Configuration
+# This file helps Coolify understand how to build and deploy your application
+
+# Build configuration
+build:
+  dockerfile: Dockerfile
+  context: .
+  
+# Port configuration
+port: 80
+
+# Health check (optional)
+healthcheck:
+  path: /
+  interval: 30s
+  timeout: 10s
+  retries: 3
