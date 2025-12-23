@@ -6,6 +6,7 @@ export interface HypothesisResult {
   result: boolean;
   confidence: number;
   evidence?: string;
+  reasoning?: string;
 }
 
 export interface AnalysisSummary {
@@ -17,6 +18,8 @@ export interface AnalysisSummary {
     }
   };
   overallIndex: number;
+  signalStability: number; 
+  isLogprobBased: boolean; // Flag to indicate if logprobs were used
 }
 
 export enum AnalysisCategory {

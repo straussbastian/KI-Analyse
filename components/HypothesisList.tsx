@@ -16,79 +16,78 @@ const HypothesisList: React.FC<HypothesisListProps> = ({ results }) => {
   });
 
   return (
-    <div className="bg-slate-800/50 rounded-xl border border-slate-700 shadow-xl overflow-hidden mt-8">
-      <div className="p-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="bg-slate-900/50 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden mt-8">
+      <div className="p-8 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
         <div>
-          <h2 className="text-xl font-bold text-slate-100">Detaillierter Hypothesen-Check</h2>
-          <p className="text-sm text-slate-400">Einzelbewertung der 30 Verhaltensindikatoren</p>
+          <h2 className="text-2xl font-black text-white tracking-tight">Forensischer Audit</h2>
+          <p className="text-xs text-slate-500 uppercase tracking-[0.2em] font-bold mt-1">Linguistic Evidence Protocol</p>
         </div>
-        <div className="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
-          <button 
-            onClick={() => setFilter('all')}
-            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${filter === 'all' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-          >
-            Alle
-          </button>
-          <button 
-            onClick={() => setFilter('true')}
-            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${filter === 'true' ? 'bg-emerald-600/20 text-emerald-400' : 'text-slate-400 hover:text-slate-200'}`}
-          >
-            True
-          </button>
-          <button 
-            onClick={() => setFilter('false')}
-            className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${filter === 'false' ? 'bg-rose-600/20 text-rose-400' : 'text-slate-400 hover:text-slate-200'}`}
-          >
-            False
-          </button>
+        <div className="flex bg-slate-950 rounded-xl p-1 border border-slate-800">
+          {(['all', 'true', 'false'] as const).map((f) => (
+            <button 
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${filter === f ? 'bg-slate-800 text-white shadow-xl' : 'text-slate-600 hover:text-slate-400'}`}
+            >
+              {f === 'all' ? 'Full Set' : f}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="divide-y divide-slate-700/50">
+      <div className="divide-y divide-slate-800/50">
         {filtered.map((item) => (
-          <div key={item.id} className="p-6 hover:bg-slate-700/20 transition-colors group">
-            <div className="flex gap-4">
-              <div className="flex-shrink-0 mt-1">
+          <div key={item.id} className="p-8 hover:bg-slate-800/20 transition-all group">
+            <div className="flex gap-6">
+              <div className="flex-shrink-0">
                 {item.result ? (
-                  <div className="w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                    <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-rose-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center opacity-40">
+                    <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </div>
                 )}
               </div>
               <div className="flex-grow">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{item.category}</span>
-                  <span className="text-xs font-mono text-slate-500">Confidence: {item.confidence}%</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">{item.category}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="h-1 w-12 bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500" style={{ width: `${item.confidence}%` }} />
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-500">{item.confidence}% CONF</span>
+                  </div>
                 </div>
-                <h3 className="text-slate-100 font-medium mb-2 leading-relaxed">{item.statement}</h3>
-                {item.result && item.evidence && (
-                  <div className="mt-3 p-3 bg-slate-900/50 rounded-lg border border-slate-700/30">
-                    <p className="text-xs text-slate-500 mb-1 font-semibold flex items-center gap-2">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                      </svg>
-                      EVIDENCE (EXTRACT)
-                    </p>
-                    <p className="text-sm italic text-slate-300 mono">"{item.evidence}"</p>
+                <h3 className="text-slate-100 font-bold text-lg mb-4 group-hover:text-blue-400 transition-colors">{item.statement}</h3>
+                
+                {item.result && (
+                  <div className="space-y-3">
+                    {item.evidence && (
+                      <div className="p-4 bg-slate-950 rounded-xl border border-slate-800/50">
+                        <span className="text-[9px] font-black text-slate-600 uppercase mb-2 block tracking-widest">Raw Extract</span>
+                        <p className="text-sm italic text-slate-300 mono leading-relaxed">"{item.evidence}"</p>
+                      </div>
+                    )}
+                    {/* @ts-ignore - reasoning comes from dynamic JSON response */}
+                    {item.reasoning && (
+                      <div className="px-4 py-2 border-l-2 border-blue-500/30">
+                        <span className="text-[9px] font-black text-blue-500/50 uppercase mb-1 block tracking-widest">Linguistic Reasoning</span>
+                        {/* @ts-ignore */}
+                        <p className="text-xs text-slate-400 leading-relaxed">{item.reasoning}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </div>
           </div>
         ))}
-        {filtered.length === 0 && (
-          <div className="p-12 text-center text-slate-500">
-            Keine Einträge für diesen Filter gefunden.
-          </div>
-        )}
       </div>
     </div>
   );

@@ -6,24 +6,50 @@ interface InputFormProps {
   onChange: (val: string) => void;
   onAnalyze: () => void;
   isLoading: boolean;
+  progress?: number;
+  progressText?: string;
 }
 
-const InputForm: React.FC<InputFormProps> = ({ value, onChange, onAnalyze, isLoading }) => {
+const InputForm: React.FC<InputFormProps> = ({ 
+  value, 
+  onChange, 
+  onAnalyze, 
+  isLoading, 
+  progress = 0, 
+  progressText = '' 
+}) => {
   return (
     <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700 shadow-xl backdrop-blur-sm">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+        <div className={`w-3 h-3 rounded-full ${isLoading ? 'bg-blue-500 animate-pulse' : 'bg-slate-600'}`}></div>
         <h2 className="text-xl font-semibold text-slate-100">Forensischer Daten-Input</h2>
       </div>
       <p className="text-sm text-slate-400 mb-4">
-        Fügen Sie hier den kompletten Chatverlauf ein, den Sie analysieren möchten. Die KI wird linguistische Marker und Verhaltensmuster extrahieren.
+        Fügen Sie hier den kompletten Chatverlauf ein. Die Engine scannt den Text auf 30 spezifische Indikatoren für kognitive Reife und systemisches Denken.
       </p>
       <textarea
         className="w-full h-64 bg-slate-900 border border-slate-700 rounded-lg p-4 text-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none mono text-sm mb-4"
-        placeholder="[User]: Hallo, kannst du mir helfen? ... [AI]: Sicher! ..."
+        placeholder="[User]: ... [AI]: ..."
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        disabled={isLoading}
       />
+      
+      {isLoading && (
+        <div className="mb-6 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex justify-between text-[10px] uppercase tracking-widest font-bold text-slate-500">
+            <span>{progressText}</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+            <div 
+              className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+        </div>
+      )}
+
       <button
         onClick={onAnalyze}
         disabled={isLoading || !value.trim()}
@@ -39,9 +65,9 @@ const InputForm: React.FC<InputFormProps> = ({ value, onChange, onAnalyze, isLoa
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            Analysiere Muster...
+            Verarbeitung läuft...
           </>
-        ) : 'Sequenzielle Analyse Starten'}
+        ) : 'Linguistische Sequenz-Analyse'}
       </button>
     </div>
   );
