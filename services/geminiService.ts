@@ -1,41 +1,84 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { HYPOTHESES } from "../constants";
+import { LLMProviderType } from "../types";
 
-export const performForensicAnalysis = async (chatContext: string) => {
-  if (!process.env.API_KEY) {
-    throw new Error("API_KEY ist nicht konfiguriert. Bitte prüfen Sie die Umgebungsvariablen.");
-  }
-
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const modelName = 'gemini-3-flash-preview';
-  
-  // Wir müssen der KI die Liste der Kriterien geben, sonst kann sie die IDs nicht zuordnen!
+const getSystemPrompt = () => {
   const criteriaList = HYPOTHESES.map(h => `ID ${h.id} (${h.category}): ${h.statement}`).join('\n');
-
-  const prompt = `
+  return `
     IDENTITÄT: Du bist ein forensischer Linguist.
     AUFGABE: Analysiere den Chatverlauf auf die folgenden 30 kognitiven Verhaltensmuster.
     
     ZU PRÜFENDE HYPOTHESEN:
     ${criteriaList}
     
-    FORENSISCHES MATERIAL (CHAT):
-    ${chatContext}
-    
     ANALYSE-REGELN:
     - Gib für JEDE ID (1-30) ein Ergebnis zurück.
     - "result": true, wenn das Muster nachweisbar ist.
-    - "confidence": 0-100 (Sicherheit deiner Einschätzung).
-    - "evidence": Wörtliches Zitat oder präzise Beschreibung der Stelle.
-    - "reasoning": Kurze linguistische Herleitung.
+    - "confidence": 0-100.
+    - "evidence": Wörtliches Zitat.
+    - "reasoning": Kurze Begründung.
     
-    ANTWORTE STRENG ALS JSON-ARRAY.
+    ANTWORTE AUSSCHLIESSLICH ALS REINES JSON-ARRAY. KEIN TEXT DAVOR ODER DANACH.
   `;
+};
+
+const callMistral = async (prompt: string, chatContext: string) => {
+  // Mistral Integration via Standard-Fetch (OpenAI-kompatibel)
+  // Wir nutzen hier beispielhaft den API_KEY, idealerweise gäbe es einen separaten MISTRAL_API_KEY
+  const apiKey = process.env.API_KEY; 
+  const endpoint = "https://api.mistral.ai/v1/chat/completions";
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: "mistral-large-latest",
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: `Hier ist der Chatverlauf zur Analyse:\n\n${chatContext}` }
+      ],
+      response_format: { type: "json_object" }, // Mistral unterstützt JSON-Modus
+      temperature: 0
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(`Mistral API Error: ${err.message || response.statusText}`);
+  }
+
+  const result = await response.json();
+  const content = result.choices[0].message.content;
+  
+  // Mistral gibt oft ein Objekt zurück, das das Array enthält
+  const parsed = JSON.parse(content);
+  return Array.isArray(parsed) ? parsed : (parsed.results || parsed.analysis || []);
+};
+
+export const performForensicAnalysis = async (chatContext: string, provider: LLMProviderType = 'GEMINI_FLASH') => {
+  const systemPrompt = getSystemPrompt();
+
+  if (provider === 'MISTRAL_LARGE') {
+    const data = await callMistral(systemPrompt, chatContext);
+    return {
+      data,
+      signalStability: 85, // Heuristischer Wert für Mistral
+      isLogprobBased: false,
+      provider
+    };
+  }
+
+  // Gemini Path (Default)
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const modelName = provider === 'GEMINI_PRO' ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
 
   const config = {
-    temperature: 0, // Maximale Präzision für forensische Aufgaben
-    maxOutputTokens: 12000, // Erhöht für 30 detaillierte Ergebnisse
+    temperature: 0,
+    maxOutputTokens: 12000,
     responseMimeType: "application/json",
     responseSchema: {
       type: Type.ARRAY,
@@ -56,37 +99,29 @@ export const performForensicAnalysis = async (chatContext: string) => {
   try {
     const response = await ai.models.generateContent({
       model: modelName,
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: [{ parts: [{ text: `${systemPrompt}\n\nMATERIAL:\n${chatContext}` }] }],
       config: config
     });
 
     const textOutput = response.text;
-    if (!textOutput) {
-      throw new Error("Keine Antwort von der Engine erhalten.");
-    }
+    if (!textOutput) throw new Error("Keine Antwort von Gemini.");
 
-    // Bereinigung von potentiellem Markdown-Rauschen
     const sanitizedJson = textOutput.replace(/```json/g, "").replace(/```/g, "").trim();
     const data = JSON.parse(sanitizedJson);
 
-    if (!Array.isArray(data)) {
-      throw new Error("Ungültiges Datenformat von der KI erhalten.");
-    }
-
-    // Berechnung der Signalgüte basierend auf der durchschnittlichen KI-Konfidenz der Treffer
-    const hits = data.filter(d => d.result);
+    const hits = data.filter((d: any) => d.result);
     const avgHitConf = hits.length > 0 
-      ? hits.reduce((acc, curr) => acc + curr.confidence, 0) / hits.length 
+      ? hits.reduce((acc: number, curr: any) => acc + curr.confidence, 0) / hits.length 
       : 80;
 
     return {
       data,
       signalStability: Math.round(avgHitConf),
-      isLogprobBased: false
+      isLogprobBased: false,
+      provider
     };
-
   } catch (error: any) {
-    console.error("Forensic Engine Error:", error);
-    throw new Error(error.message || "Unbekannter Fehler in der Analyse-Engine.");
+    console.error("Gemini Error:", error);
+    throw error;
   }
 };

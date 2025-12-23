@@ -1,4 +1,6 @@
 
+export type LLMProviderType = 'GEMINI_FLASH' | 'GEMINI_PRO' | 'MISTRAL_LARGE';
+
 export interface HypothesisResult {
   id: number;
   category: string;
@@ -19,7 +21,8 @@ export interface AnalysisSummary {
   };
   overallIndex: number;
   signalStability: number; 
-  isLogprobBased: boolean; // Flag to indicate if logprobs were used
+  isLogprobBased: boolean;
+  provider: LLMProviderType;
 }
 
 export enum AnalysisCategory {
