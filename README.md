@@ -4,41 +4,85 @@
 
 # KI-Analyse - Forensic Linguist Analyst
 
-Forensische Analyse von Chat-Konversationen zur Bewertung kognitiver Fähigkeiten.
+Forensische Analyse von Chat-Konversationen zur Bewertung kognitiver Fähigkeiten. Die Anwendung analysiert Chat-Verläufe anhand von 30 Hypothesen in 6 Kategorien:
 
-View your app in AI Studio: https://ai.studio/apps/drive/1vn7XZYOcQNHfPStKI-dNrcYeiqy2QlrG
+- **Analysefähigkeit** - Zerlegung komplexer Probleme
+- **Abstraktionsfähigkeit** - Nutzung von Analogien und Modellen
+- **Kontext- & Systemdenken** - Erkennung von Abhängigkeiten
+- **Reflexionsfähigkeit** - Kritische Selbstbewertung
+- **Zielklarheit** - Strukturierte Anfragen
+- **Umgang mit Komplexität** - Technische Problemlösung
 
-## Run Locally
+## 🚀 Lokale Entwicklung
 
-**Prerequisites:**  Node.js >= 22.11.0
+**Voraussetzungen:** Node.js >= 22.11.0
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
-
-## Docker Deployment
-
-### Quick Start with Docker Compose
+### Installation
 
 ```bash
-# Set your API key in .env.local
-echo "GEMINI_API_KEY=your_key_here" > .env.local
+# Dependencies installieren
+npm install
 
-# Build and run
+# API Key in .env.local eintragen
+echo "GEMINI_API_KEY=dein_gemini_api_key" > .env.local
+
+# Development Server starten
+npm run dev
+```
+
+Die App läuft dann auf [http://localhost:3000](http://localhost:3000)
+
+**API Key erhalten:** [Google AI Studio](https://aistudio.google.com/app/apikey)
+
+## 🐳 Docker Deployment
+
+### Lokaler Test mit Docker Compose
+
+```bash
+# API Key in .env.local setzen
+echo "GEMINI_API_KEY=dein_api_key" > .env.local
+
+# Container bauen und starten
 docker-compose up -d
 ```
 
-App runs on http://localhost:8080
+Die App läuft dann auf [http://localhost:8080](http://localhost:8080)
 
-### Manual Docker Build
+### Manueller Docker Build
 
 ```bash
-docker build --build-arg GEMINI_API_KEY=your_key -t ki-analyse .
+# Image bauen
+docker build --build-arg GEMINI_API_KEY=dein_api_key -t ki-analyse .
+
+# Container starten
 docker run -p 8080:80 ki-analyse
 ```
 
-### Deploy with Coolify
+### Deployment mit Coolify
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed Coolify deployment instructions.
+Detaillierte Anleitung für das Deployment mit Coolify findest du in [DEPLOYMENT.md](DEPLOYMENT.md).
+
+**Wichtig:** Der `GEMINI_API_KEY` muss in Coolify als **Build Argument** gesetzt werden, nicht als normale Umgebungsvariable!
+
+## 📦 Technologie-Stack
+
+- **Frontend:** React 19 + TypeScript
+- **Build Tool:** Vite 6
+- **AI:** Google Gemini API (@google/genai)
+- **Charts:** Recharts
+- **Production:** nginx (Alpine Linux)
+- **Container:** Multi-stage Docker Build
+
+## 📊 Features
+
+- Analyse von Chat-Konversationen mit Gemini Flash oder Pro
+- Bewertung von 30 kognitiven Hypothesen
+- Visuelle Darstellung der Ergebnisse mit Radar-Charts
+- Signal-Stabilitäts-Indikator
+- Detaillierte Begründungen für jede Hypothese
+
+## 🔗 Links
+
+- [AI Studio App](https://ai.studio/apps/drive/1vn7XZYOcQNHfPStKI-dNrcYeiqy2QlrG)
+- [Deployment Guide](DEPLOYMENT.md)
+- [GitHub Repository](https://github.com/straussbastian/KI-Analyse)
