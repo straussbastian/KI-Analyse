@@ -1,92 +1,91 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { HYPOTHESES } from "../constants";
 
 export const performForensicAnalysis = async (chatContext: string) => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  // 'gemini-flash-latest' typically supports logprobs. 
-  // We use this model name to stay close to the stable release that supports the feature.
+  // Wir nutzen gemini-flash-latest, da dieses Modell eine breite Feature-Unterstützung bietet.
   const modelName = 'gemini-flash-latest';
   
   const prompt = `
-    Du bist ein forensischer Linguist der höchsten Stufe. Analysiere den folgenden Chatverlauf auf die unten aufgeführten Hypothesen.
+    IDENTITÄT: Du bist ein forensischer Linguist. Dein Stil ist kühl, präzise und rein datenbasiert.
+    AUFGABE: Analysiere den folgenden Chatverlauf auf 30 spezifische kognitive und linguistische Verhaltensmuster.
     
-    FORENSISCHES MATERIAL (CHAT):
+    FORENSISCHES MATERIAL:
     ${chatContext}
     
-    HYPOTHESEN-SET (JSON):
-    ${JSON.stringify(HYPOTHESES.map(h => ({ id: h.id, statement: h.statement })))}
-    
-    ANWEISUNG:
-    Erstelle eine forensische Analyse. Gib das Ergebnis AUSSCHLIESSLICH als JSON-Array zurück.
-    Jedes Objekt im Array muss folgende Felder haben:
-    - id (number)
-    - result (boolean)
-    - confidence (number, 0-100)
-    - evidence (string, kurzes Zitat)
-    - reasoning (string, linguistische Begründung)
-    
-    WICHTIG: Antworte NUR mit dem JSON-Array im Code-Block. Kein Text davor oder danach.
+    ANALYSE-MODUS:
+    - Jede Hypothese (ID 1-30) muss einzeln geprüft werden.
+    - Suche nach Beweisen wie: Wortwahl, Satzstruktur, Abstraktionsgrad, logische Konsistenz.
+    - Sei extrem skeptisch (Hohe Konfidenz nur bei klaren Beweisen).
   `;
+
+  const baseConfig = {
+    temperature: 0,
+    responseMimeType: "application/json",
+    responseSchema: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          id: { type: Type.INTEGER },
+          result: { type: Type.BOOLEAN },
+          confidence: { type: Type.NUMBER },
+          evidence: { type: Type.STRING },
+          reasoning: { type: Type.STRING }
+        },
+        required: ["id", "result", "confidence", "evidence", "reasoning"],
+      },
+    },
+  };
+
+  const configWithLogprobs = {
+    ...baseConfig,
+    responseLogprobs: true,
+    logprobs: 3,
+  };
 
   let response;
   let logprobsAvailable = false;
 
   try {
-    // Attempt 1: Explicitly request Logprobs
+    // Erster Versuch: Analyse mit mathematischen Logprobs
     response = await ai.models.generateContent({
       model: modelName,
       contents: [{ parts: [{ text: prompt }] }],
-      config: {
-        responseLogprobs: true,
-        logprobs: 3,
-        temperature: 0.1,
-      }
+      config: configWithLogprobs
     });
-    
-    // Check if the response actually contains logprobs
-    // @ts-ignore
-    if (response.candidates?.[0]?.logprobsResult) {
-      logprobsAvailable = true;
-      console.log("Logprobs successfully retrieved from API.");
-    }
+    logprobsAvailable = true;
   } catch (error: any) {
-    const errorMsg = error?.message || "";
-    if (errorMsg.includes("Logprobs is not enabled") || errorMsg.includes("400")) {
-      console.warn("Logprobs failed. Triggering standard fallback.");
+    const errorMsg = error.message || "";
+    // Wenn das Modell oder die Region keine Logprobs unterstützt, Fallback auf Standard-Analyse
+    if (errorMsg.includes("Logprobs is not enabled") || errorMsg.includes("INVALID_ARGUMENT") || errorMsg.includes("400")) {
+      console.warn("Logprobs nicht verfügbar, starte Fallback-Analyse ohne Logprobs...");
       response = await ai.models.generateContent({
         model: modelName,
         contents: [{ parts: [{ text: prompt }] }],
-        config: { temperature: 0.1 }
+        config: baseConfig
       });
       logprobsAvailable = false;
     } else {
+      // Andere kritische Fehler (z.B. Auth, Quota) weiterreichen
       throw error;
     }
   }
 
-  const rawText = response.text || "";
-  let jsonStr = rawText.trim();
-  const jsonBlockMatch = jsonStr.match(/```(?:json)?([\s\S]*?)```/);
-  if (jsonBlockMatch) {
-    jsonStr = jsonBlockMatch[1].trim();
-  } else {
-    const firstBracket = jsonStr.indexOf('[');
-    const lastBracket = jsonStr.lastIndexOf(']');
-    if (firstBracket !== -1 && lastBracket !== -1) {
-      jsonStr = jsonStr.substring(firstBracket, lastBracket + 1);
-    }
-  }
-
+  const rawText = response.text || "[]";
   let data;
   try {
-    data = JSON.parse(jsonStr);
+    data = JSON.parse(rawText);
   } catch (e) {
-    throw new Error("Linguistische Engine: JSON-Parsing fehlgeschlagen.");
+    console.error("JSON Parsing Error:", rawText);
+    throw new Error("Die KI-Antwort konnte nicht verarbeitet werden. Bitte versuchen Sie es erneut.");
   }
 
+  // --- BERECHNUNG DER SIGNAL-STABILITÄT ---
   let statisticalStability = 0;
+  
   // @ts-ignore
   const logprobsResult = response.candidates?.[0]?.logprobsResult;
   
@@ -94,14 +93,14 @@ export const performForensicAnalysis = async (chatContext: string) => {
     const linearProbs = logprobsResult.chosenCandidates.map((c: any) => 
       Math.exp(c.logProbability || 0)
     );
-    const avgProb = linearProbs.reduce((a: number, b: number) => a + b, 0) / linearProbs.length;
+    const avgProb = linearProbs.reduce((a: number, b: number) => a + b, 0) / (linearProbs.length || 1);
     statisticalStability = Math.round(avgProb * 100);
   } else {
-    // Fallback mean calculation
-    const totalConf = data.reduce((acc: number, curr: any) => acc + (curr.confidence || 0), 0);
-    statisticalStability = Math.round(totalConf / (data.length || 1));
+    // Heuristischer Fallback: Durchschnitt der modell-internen Konfidenz-Scores
+    const avgConf = data.reduce((acc: number, curr: any) => acc + (curr.confidence || 0), 0) / (data.length || 1);
+    statisticalStability = Math.round(avgConf);
   }
-  
+
   return {
     data,
     signalStability: statisticalStability,

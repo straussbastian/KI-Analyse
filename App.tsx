@@ -149,8 +149,8 @@ const App: React.FC = () => {
               {[
                 { label: 'Indikatoren', val: '30' },
                 { label: 'Kategorien', val: '6' },
-                { label: 'Engine', val: 'Flash 1.5' },
-                { label: 'Mode', val: 'Logprobs' }
+                { label: 'Engine', val: 'Flash 2.5' },
+                { label: 'Mode', val: 'Hybrid' }
               ].map((stat, i) => (
                 <div key={i} className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 text-center shadow-lg">
                   <div className="text-2xl font-black text-blue-400">{stat.val}</div>
@@ -189,18 +189,24 @@ const App: React.FC = () => {
 
         {error && (
           <div className="mt-8 p-6 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400 text-sm font-medium text-center max-w-4xl mx-auto animate-in shake duration-500">
-            <div className="flex items-center justify-center gap-2 mb-1">
+            <div className="flex items-center justify-center gap-2 mb-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
               <span className="font-black uppercase tracking-widest">Systemfehler</span>
             </div>
-            {error}
+            <p className="mb-4">{error}</p>
+            <button 
+              onClick={() => setError(null)} 
+              className="text-[10px] uppercase font-bold tracking-widest bg-rose-500/20 px-4 py-1.5 rounded-full hover:bg-rose-500/30 transition-all"
+            >
+              Meldung schließen
+            </button>
           </div>
         )}
       </main>
 
       <footer className="mt-20 border-t border-slate-800 py-12 text-center">
         <p className="text-slate-600 text-[10px] font-black uppercase tracking-[0.3em] mono">
-          &copy; 2024 FORENSIC LINGUISTIC ENGINE // KERNEL-LOGPROB-v1
+          &copy; 2025 FORENSIC LINGUISTIC ENGINE // KERNEL-LOGPROB-v2.5
         </p>
       </footer>
     </div>
