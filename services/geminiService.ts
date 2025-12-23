@@ -3,26 +3,39 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { HYPOTHESES } from "../constants";
 
 export const performForensicAnalysis = async (chatContext: string) => {
+  if (!process.env.API_KEY) {
+    throw new Error("API_KEY ist nicht konfiguriert. Bitte prüfen Sie die Umgebungsvariablen.");
+  }
+
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const modelName = 'gemini-3-flash-preview';
   
-  // Wir nutzen gemini-flash-latest, da dieses Modell eine breite Feature-Unterstützung bietet.
-  const modelName = 'gemini-flash-latest';
-  
+  // Wir müssen der KI die Liste der Kriterien geben, sonst kann sie die IDs nicht zuordnen!
+  const criteriaList = HYPOTHESES.map(h => `ID ${h.id} (${h.category}): ${h.statement}`).join('\n');
+
   const prompt = `
-    IDENTITÄT: Du bist ein forensischer Linguist. Dein Stil ist kühl, präzise und rein datenbasiert.
-    AUFGABE: Analysiere den folgenden Chatverlauf auf 30 spezifische kognitive und linguistische Verhaltensmuster.
+    IDENTITÄT: Du bist ein forensischer Linguist.
+    AUFGABE: Analysiere den Chatverlauf auf die folgenden 30 kognitiven Verhaltensmuster.
     
-    FORENSISCHES MATERIAL:
+    ZU PRÜFENDE HYPOTHESEN:
+    ${criteriaList}
+    
+    FORENSISCHES MATERIAL (CHAT):
     ${chatContext}
     
-    ANALYSE-MODUS:
-    - Jede Hypothese (ID 1-30) muss einzeln geprüft werden.
-    - Suche nach Beweisen wie: Wortwahl, Satzstruktur, Abstraktionsgrad, logische Konsistenz.
-    - Sei extrem skeptisch (Hohe Konfidenz nur bei klaren Beweisen).
+    ANALYSE-REGELN:
+    - Gib für JEDE ID (1-30) ein Ergebnis zurück.
+    - "result": true, wenn das Muster nachweisbar ist.
+    - "confidence": 0-100 (Sicherheit deiner Einschätzung).
+    - "evidence": Wörtliches Zitat oder präzise Beschreibung der Stelle.
+    - "reasoning": Kurze linguistische Herleitung.
+    
+    ANTWORTE STRENG ALS JSON-ARRAY.
   `;
 
-  const baseConfig = {
-    temperature: 0,
+  const config = {
+    temperature: 0, // Maximale Präzision für forensische Aufgaben
+    maxOutputTokens: 12000, // Erhöht für 30 detaillierte Ergebnisse
     responseMimeType: "application/json",
     responseSchema: {
       type: Type.ARRAY,
@@ -40,70 +53,40 @@ export const performForensicAnalysis = async (chatContext: string) => {
     },
   };
 
-  const configWithLogprobs = {
-    ...baseConfig,
-    responseLogprobs: true,
-    logprobs: 3,
-  };
-
-  let response;
-  let logprobsAvailable = false;
-
   try {
-    // Erster Versuch: Analyse mit mathematischen Logprobs
-    response = await ai.models.generateContent({
+    const response = await ai.models.generateContent({
       model: modelName,
       contents: [{ parts: [{ text: prompt }] }],
-      config: configWithLogprobs
+      config: config
     });
-    logprobsAvailable = true;
-  } catch (error: any) {
-    const errorMsg = error.message || "";
-    // Wenn das Modell oder die Region keine Logprobs unterstützt, Fallback auf Standard-Analyse
-    if (errorMsg.includes("Logprobs is not enabled") || errorMsg.includes("INVALID_ARGUMENT") || errorMsg.includes("400")) {
-      console.warn("Logprobs nicht verfügbar, starte Fallback-Analyse ohne Logprobs...");
-      response = await ai.models.generateContent({
-        model: modelName,
-        contents: [{ parts: [{ text: prompt }] }],
-        config: baseConfig
-      });
-      logprobsAvailable = false;
-    } else {
-      // Andere kritische Fehler (z.B. Auth, Quota) weiterreichen
-      throw error;
+
+    const textOutput = response.text;
+    if (!textOutput) {
+      throw new Error("Keine Antwort von der Engine erhalten.");
     }
-  }
 
-  const rawText = response.text || "[]";
-  let data;
-  try {
-    data = JSON.parse(rawText);
-  } catch (e) {
-    console.error("JSON Parsing Error:", rawText);
-    throw new Error("Die KI-Antwort konnte nicht verarbeitet werden. Bitte versuchen Sie es erneut.");
-  }
+    // Bereinigung von potentiellem Markdown-Rauschen
+    const sanitizedJson = textOutput.replace(/```json/g, "").replace(/```/g, "").trim();
+    const data = JSON.parse(sanitizedJson);
 
-  // --- BERECHNUNG DER SIGNAL-STABILITÄT ---
-  let statisticalStability = 0;
-  
-  // @ts-ignore
-  const logprobsResult = response.candidates?.[0]?.logprobsResult;
-  
-  if (logprobsAvailable && logprobsResult?.chosenCandidates) {
-    const linearProbs = logprobsResult.chosenCandidates.map((c: any) => 
-      Math.exp(c.logProbability || 0)
-    );
-    const avgProb = linearProbs.reduce((a: number, b: number) => a + b, 0) / (linearProbs.length || 1);
-    statisticalStability = Math.round(avgProb * 100);
-  } else {
-    // Heuristischer Fallback: Durchschnitt der modell-internen Konfidenz-Scores
-    const avgConf = data.reduce((acc: number, curr: any) => acc + (curr.confidence || 0), 0) / (data.length || 1);
-    statisticalStability = Math.round(avgConf);
-  }
+    if (!Array.isArray(data)) {
+      throw new Error("Ungültiges Datenformat von der KI erhalten.");
+    }
 
-  return {
-    data,
-    signalStability: statisticalStability,
-    isLogprobBased: logprobsAvailable
-  };
+    // Berechnung der Signalgüte basierend auf der durchschnittlichen KI-Konfidenz der Treffer
+    const hits = data.filter(d => d.result);
+    const avgHitConf = hits.length > 0 
+      ? hits.reduce((acc, curr) => acc + curr.confidence, 0) / hits.length 
+      : 80;
+
+    return {
+      data,
+      signalStability: Math.round(avgHitConf),
+      isLogprobBased: false
+    };
+
+  } catch (error: any) {
+    console.error("Forensic Engine Error:", error);
+    throw new Error(error.message || "Unbekannter Fehler in der Analyse-Engine.");
+  }
 };
