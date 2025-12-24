@@ -5,7 +5,10 @@ Diese Anleitung beschreibt, wie du die KI-Analyse App mit Coolify deployen kanns
 ## Voraussetzungen
 
 - Coolify-Installation
-- Gemini API Key von https://aistudio.google.com/app/apikey
+- API Keys:
+  - **OpenAI API Key** (für GPT-4o mit Logprobs): https://platform.openai.com/api-keys
+  - **Gemini API Key** (optional): https://aistudio.google.com/app/apikey
+  - **Mistral API Key** (optional): https://console.mistral.ai/
 
 ## Deployment-Schritte
 
@@ -26,13 +29,19 @@ Coolify erkennt automatisch das Dockerfile. Stelle sicher, dass folgende Einstel
 
 ### 3. Umgebungsvariablen setzen
 
-Füge folgende Build-Argument in Coolify hinzu:
+Füge folgende Build-Argumente in Coolify hinzu:
 
 ```
-GEMINI_API_KEY=dein_gemini_api_key_hier
+OPENAI_API_KEY=sk-proj-...
+GEMINI_API_KEY=AIza...
+MISTRAL_API_KEY=...
+API_KEY=AIza...
 ```
 
-**Wichtig**: In Coolify musst du dies als **Build Argument** setzen, nicht als normale Environment Variable, da der API Key zur Build-Zeit benötigt wird.
+**Wichtig**: 
+- In Coolify musst du diese als **Build Arguments** setzen, nicht als normale Environment Variables
+- Die API Keys werden zur Build-Zeit benötigt und in das finale Image eingebaut
+- Das Dockerfile konvertiert diese automatisch zu `VITE_` prefixed Variablen für Vite
 
 ### 4. Deploy starten
 
@@ -43,14 +52,32 @@ Klicke auf "Deploy" und warte, bis der Build-Prozess abgeschlossen ist.
 Um das Docker-Image lokal zu testen:
 
 ```bash
-# Build mit API Key
-docker build --build-arg GEMINI_API_KEY=dein_api_key -t ki-analyse .
+# Build mit API Keys
+docker build \
+  --build-arg OPENAI_API_KEY=sk-proj-... \
+  --build-arg GEMINI_API_KEY=AIza... \
+  --build-arg MISTRAL_API_KEY=... \
+  --build-arg API_KEY=AIza... \
+  -t ki-analyse .
 
 # Container starten
 docker run -p 8080:80 ki-analyse
 ```
 
 Die App ist dann unter http://localhost:8080 erreichbar.
+
+**Oder mit docker-compose:**
+
+```bash
+# .env Datei erstellen
+cp .env.example .env
+# API Keys in .env eintragen
+
+# Build und Start
+docker-compose up -d
+```
+
+Die App ist dann unter http://localhost:8095 erreichbar.
 
 ## Troubleshooting
 

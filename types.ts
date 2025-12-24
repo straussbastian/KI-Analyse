@@ -1,5 +1,5 @@
 
-export type LLMProviderType = 'GEMINI_FLASH' | 'GEMINI_PRO' | 'MISTRAL_LARGE';
+export type LLMProviderType = 'GEMINI_FLASH' | 'GEMINI_PRO' | 'MISTRAL_LARGE' | 'OPENAI_GPT4O';
 
 export interface HypothesisResult {
   id: number;

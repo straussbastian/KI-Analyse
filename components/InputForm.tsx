@@ -22,6 +22,7 @@ const InputForm: React.FC<InputFormProps> = ({
   const [selectedProvider, setSelectedProvider] = React.useState<LLMProviderType>('GEMINI_FLASH');
 
   const providers: { id: LLMProviderType; name: string; desc: string; color: string }[] = [
+    { id: 'OPENAI_GPT4O', name: 'GPT-4o', desc: 'Logprobs-basiert', color: 'bg-emerald-600' },
     { id: 'GEMINI_FLASH', name: 'Gemini 3 Flash', desc: 'Schnell & Präzise', color: 'bg-blue-600' },
     { id: 'GEMINI_PRO', name: 'Gemini 3 Pro', desc: 'Tiefenanalyse', color: 'bg-indigo-600' },
     { id: 'MISTRAL_LARGE', name: 'Mistral Large', desc: 'Alternative Logik', color: 'bg-amber-600' }

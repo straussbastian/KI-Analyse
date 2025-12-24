@@ -128,7 +128,7 @@ const App: React.FC = () => {
                 Multi-Model <span className="text-blue-500">Forensik</span>
               </h2>
               <p className="text-slate-400 text-lg max-w-2xl mx-auto font-medium">
-                Wählen Sie zwischen Google Gemini oder Mistral AI für maximale Flexibilität in der linguistischen Analyse.
+                Wählen Sie zwischen OpenAI GPT-4o (Logprobs-basiert), Google Gemini oder Mistral AI für maximale Flexibilität in der linguistischen Analyse.
               </p>
             </div>
 
