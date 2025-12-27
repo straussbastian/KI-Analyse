@@ -1,35 +1,71 @@
 
 import React, { useState } from 'react';
-import { HypothesisResult } from '../types';
+import { HypothesisResult, AnalysisCategory } from '../types';
 
 interface HypothesisListProps {
   results: HypothesisResult[];
 }
 
 const HypothesisList: React.FC<HypothesisListProps> = ({ results }) => {
-  const [filter, setFilter] = useState<'all' | 'true' | 'false'>('all');
+  const [resultFilter, setResultFilter] = useState<'all' | 'true' | 'false'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+
+  const categories = Object.values(AnalysisCategory);
 
   const filtered = results.filter(r => {
-    if (filter === 'true') return r.result;
-    if (filter === 'false') return !r.result;
+    // Result Filter
+    if (resultFilter === 'true' && !r.result) return false;
+    if (resultFilter === 'false' && r.result) return false;
+    
+    // Category Filter
+    if (categoryFilter !== 'all' && r.category !== categoryFilter) return false;
+    
     return true;
   });
 
   return (
     <div className="bg-slate-900/50 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden mt-8">
-      <div className="p-8 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-        <div>
-          <h2 className="text-2xl font-black text-white tracking-tight">Forensischer Audit</h2>
-          <p className="text-xs text-slate-500 uppercase tracking-[0.2em] font-bold mt-1">Linguistic Evidence Protocol</p>
+      <div className="p-8 border-b border-slate-800">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-6">
+          <div>
+            <h2 className="text-2xl font-black text-white tracking-tight">Forensischer Audit</h2>
+            <p className="text-xs text-slate-500 uppercase tracking-[0.2em] font-bold mt-1">Linguistic Evidence Protocol</p>
+          </div>
+          <div className="flex bg-slate-950 rounded-xl p-1 border border-slate-800">
+            {(['all', 'true', 'false'] as const).map((f) => (
+              <button 
+                key={f}
+                onClick={() => setResultFilter(f)}
+                className={`px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${resultFilter === f ? 'bg-slate-800 text-white shadow-xl' : 'text-slate-600 hover:text-slate-400'}`}
+              >
+                {f === 'all' ? 'Full Set' : f}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex bg-slate-950 rounded-xl p-1 border border-slate-800">
-          {(['all', 'true', 'false'] as const).map((f) => (
-            <button 
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${filter === f ? 'bg-slate-800 text-white shadow-xl' : 'text-slate-600 hover:text-slate-400'}`}
+        
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setCategoryFilter('all')}
+            className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${
+              categoryFilter === 'all' 
+                ? 'bg-blue-600 text-white shadow-lg' 
+                : 'bg-slate-800 text-slate-400 hover:text-white'
+            }`}
+          >
+            Alle Kategorien
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setCategoryFilter(cat)}
+              className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                categoryFilter === cat 
+                  ? 'bg-blue-600 text-white shadow-lg' 
+                  : 'bg-slate-800 text-slate-400 hover:text-white'
+              }`}
             >
-              {f === 'all' ? 'Full Set' : f}
+              {cat}
             </button>
           ))}
         </div>

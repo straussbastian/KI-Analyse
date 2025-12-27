@@ -1,5 +1,7 @@
 # Logprobs-basierte Analyse mit OpenAI GPT-4o
 
+**BYOK-Architektur:** Keine API-Keys im Build - Keys nur im Browser!
+
 ## Was ist der Unterschied?
 
 ### Vorher (Semantische Bewertung)
@@ -52,7 +54,39 @@ const jaProb = Math.exp(-0.05);    // ≈ 0.95 (95%)
 const neinProb = Math.exp(-3.2);   // ≈ 0.04 (4%)
 
 // Normalisieren
-const confidence = (jaProb / (jaProb + neinProb)) * 100;  // 95%
+const totalProb = jaProb + neinProb;
+const normalizedJaProb = totalProb > 0 ? (jaProb / totalProb) : 0;
+
+// Confidence = Sicherheit der gegebenen Antwort
+const isYes = answer.includes('JA') || answer.includes('YES') || answer.includes('TRUE');
+const confidence = isYes 
+  ? normalizedJaProb * 100                    // Bei JA: Zeige JA-Wahrscheinlichkeit
+  : (1 - normalizedJaProb) * 100;            // Bei NEIN: Zeige NEIN-Wahrscheinlichkeit
+```
+
+### 4. Deutsche Token-Erkennung (WICHTIG!)
+GPT-4o antwortet auf Deutsch oft mit "NEIN", aber die Logprobs enthalten "NE" (das erste Token von "NEIN"):
+
+```typescript
+// Token-Erkennung für deutsche Antworten
+topLogprobs.forEach((item) => {
+  const token = item.token.toUpperCase().trim();
+  const prob = Math.exp(item.logprob);
+  
+  if (token.includes('JA') || token.includes('YES') || token.includes('TRUE') || token === '1') {
+    jaProb += prob;
+  } else if (token.includes('NEIN') || token.includes('NE') || token.includes('NO') || token.includes('FALSE') || token === '0') {
+    neinProb += prob;  // ⭐ NE ist entscheidend für deutsche Antworten!
+  }
+});
+```
+
+**Beispiel:**
+```
+Antwort: "NEIN"
+Top Tokens: ["NE" (0.679), "JA" (0.321), ...]
+JA: 0.321, NEIN: 0.679
+Confidence: 68% (Modell war sich zu 68% sicher bei NEIN)
 ```
 
 ## Vorteile
@@ -83,7 +117,24 @@ const confidence = (jaProb / (jaProb + neinProb)) * 100;  // 95%
 ### Token-Mapping
 Das System erkennt verschiedene Antwortformate:
 - **JA**: `JA`, `YES`, `TRUE`, `1`
-- **NEIN**: `NEIN`, `NO`, `FALSE`, `0`
+- **NEIN**: `NEIN`, `NE`, `NO`, `FALSE`, `0` ⭐ **NE für deutsche Antworten!**
+
+### Confidence-gewichtetes Scoring
+Die Bewertung ist nicht mehr binär, sondern nuanciert:
+
+```typescript
+// Punkte-Berechnung pro Hypothese
+const points = result 
+  ? confidence / 100              // JA: confidence als Punkte
+  : (100 - confidence) / 100;     // NEIN: Unsicherheit als Punkte
+
+// Kategorie-Score = Summe der Punkte / Anzahl Hypothesen
+```
+
+**Beispiel:**
+- JA mit 85% Confidence → 0.85 Punkte
+- NEIN mit 85% Confidence → 0.15 Punkte
+- Kategorie mit 5 Hypothesen: 3.91 / 5 = 78% Score
 
 ## Kosten & Performance
 
@@ -107,14 +158,13 @@ Das System erkennt verschiedene Antwortformate:
 | Präzision | Gut | Exzellent |
 | Logprobs | ❌ Nicht verfügbar | ✅ Verfügbar |
 
-## Verwendung
+## Verwendung (BYOK - Bring Your Own Key)
 
-1. **API Key konfigurieren**:
-   ```bash
-   cp .env.example .env
-   # Füge deinen OpenAI API Key hinzu
-   OPENAI_API_KEY=sk-...
-   ```
+1. **API Keys in der UI einrichten**:
+   - App öffnen → API-Key-Manager ausfüllen
+   - OpenAI GPT-4o API Key eingeben
+   - Keys werden nur im Browser gespeichert (LocalStorage)
+   - **Keine .env-Dateien mehr nötig!**
 
 2. **Provider auswählen**:
    - In der UI "GPT-4o" auswählen
@@ -125,19 +175,58 @@ Das System erkennt verschiedene Antwortformate:
    - `result: true/false` - Objektive Bewertung
    - `confidence: 0-100` - Mathematisch fundierte Sicherheit
    - `evidence` - Zeigt die Logprobs-Verteilung
+   - `score` - Confidence-gewichtete Punkte
 
-## Beispiel-Output
+4. **Filter verwenden**:
+   - **Result-Filter**: Full Set / TRUE / FALSE
+   - **Kategorie-Filter**: 6 Kategorien einzeln filterbar
+   - **Kombinierbar**: TRUE + "Analysefähigkeit" → Nur erfolgreiche Analyse-Hypothesen
+
+5. **Hypothesen anpassen** (optional):
+   - "Hypothesen bearbeiten" klicken
+   - Fragen nach Bedarf anpassen
+   - Speichern oder zurücksetzen
+
+## Beispiel-Output (v3.1.0)
 
 ```json
 {
   "id": 1,
+  "category": "Analysefähigkeit",
+  "statement": "Der Nutzer identifiziert logische Lücken in den Antworten der KI.",
   "result": true,
   "confidence": 95,
   "evidence": "Logprob-basierte Analyse (JA: 95.2%, NEIN: 4.8%)",
-  "reasoning": "Objektive Wahrscheinlichkeit basierend auf Token-Logprobs"
+  "reasoning": "Objektive Wahrscheinlichkeit basierend auf Token-Logprobs",
+  "score": 0.95
 }
+```
+
+## Debug-Logging (v3.1.0)
+
+Die Console zeigt detaillierte Token-Informationen:
+
+```javascript
+Hypothese 3: Antwort="NEIN"
+Top Tokens: ['"NE" (0.679)', '"JA" (0.321)', '"Nein" (0.000)', ...]
+JA: 0.321, NEIN: 0.679
+✓ Hypothese 3/30 analysiert (ID: 3)
 ```
 
 ## Fazit
 
-Die Logprobs-basierte Analyse mit OpenAI GPT-4o bietet eine **objektive, mathematisch fundierte Alternative** zur semantischen Bewertung. Während Gemini schneller und günstiger ist, liefert GPT-4o präzisere und transparentere Ergebnisse.
+Die Logprobs-basierte Analyse mit OpenAI GPT-4o bietet eine **objektive, mathematisch fundierte Alternative** zur semantischen Bewertung. 
+
+### **v3.1.0 Verbesserungen:**
+- ✅ **NE-Token-Erkennung** für deutsche Antworten
+- ✅ **Confidence-gewichtetes Scoring** statt binär
+- ✅ **BYOK-Architektur** für maximale Sicherheit
+- ✅ **Kategorie-Filter** für detaillierte Analyse
+- ✅ **Benutzerdefinierte Hypothesen** für Flexibilität
+
+Während Gemini schneller und günstiger ist, liefert GPT-4o präzisere, transparentere und nuanciertere Ergebnisse.
+
+### **Empfehlung:**
+- **Schnelle Screenshots:** Gemini Pro
+- **Forensische Analysen:** OpenAI GPT-4o mit Logprobs
+- **Production:** BYOK-Architektur für Sicherheit

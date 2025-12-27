@@ -22,13 +22,20 @@ const AnalysisDashboard: React.FC<AnalysisDashboardProps> = ({ results, signalSt
         categories[r.category] = { score: 0, count: 0, total: 0 };
       }
       categories[r.category].total += 1;
-      if (r.result) {
-        categories[r.category].count += 1;
-        trueCount += 1;
-      }
+      
+      // Confidence-gewichtetes Scoring:
+      // JA (result: true): confidence / 100 Punkte
+      // NEIN (result: false): (100 - confidence) / 100 Punkte
+      const points = r.result 
+        ? r.confidence / 100 
+        : (100 - r.confidence) / 100;
+      
+      categories[r.category].count += points;
+      trueCount += points;
     });
 
     Object.keys(categories).forEach(cat => {
+      // Score ist jetzt gewichteter Durchschnitt (0-100%)
       categories[cat].score = Math.round((categories[cat].count / categories[cat].total) * 100);
     });
 

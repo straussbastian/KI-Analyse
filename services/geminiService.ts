@@ -23,8 +23,7 @@ const getSystemPrompt = () => {
   `;
 };
 
-const callOpenAI = async (hypothesis: { id: number; statement: string; category: string }, chatContext: string) => {
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.VITE_API_KEY;
+const callOpenAI = async (hypothesis: { id: number; statement: string; category: string }, chatContext: string, apiKey: string) => {
   const endpoint = "https://api.openai.com/v1/chat/completions";
 
   const question = `Analysiere den folgenden Chatverlauf und beantworte die Frage mit JA oder NEIN.
@@ -73,22 +72,33 @@ Antworte ausschließlich mit JA oder NEIN.`;
   let jaProb = 0;
   let neinProb = 0;
 
+  console.log(`Hypothese ${hypothesis.id}: Antwort="${answer}"`);
+  console.log('Top Tokens:', topLogprobs.map((t: any) => `"${t.token}" (${Math.exp(t.logprob).toFixed(3)})`));
+
   topLogprobs.forEach((item: any) => {
-    const token = item.token.toUpperCase();
+    const token = item.token.toUpperCase().trim();
     const prob = Math.exp(item.logprob);
     
-    if (token === 'JA' || token === 'YES' || token === 'TRUE' || token === '1') {
+    if (token.includes('JA') || token.includes('YES') || token.includes('TRUE') || token === '1') {
       jaProb += prob;
-    } else if (token === 'NEIN' || token === 'NO' || token === 'FALSE' || token === '0') {
+    } else if (token.includes('NEIN') || token.includes('NE') || token.includes('NO') || token.includes('FALSE') || token === '0') {
       neinProb += prob;
     }
   });
+  
+  console.log(`JA: ${jaProb.toFixed(3)}, NEIN: ${neinProb.toFixed(3)}`);
 
   const totalProb = jaProb + neinProb;
   const normalizedJaProb = totalProb > 0 ? (jaProb / totalProb) : 0;
   
   const isYes = answer.includes('JA') || answer.includes('YES') || answer.includes('TRUE');
-  const confidence = Math.round(normalizedJaProb * 100);
+  
+  // Confidence = Wie sicher war das Modell bei seiner Entscheidung?
+  // Bei JA-Antwort: Zeige JA-Wahrscheinlichkeit
+  // Bei NEIN-Antwort: Zeige NEIN-Wahrscheinlichkeit (= 1 - JA-Wahrscheinlichkeit)
+  const confidence = isYes 
+    ? Math.round(normalizedJaProb * 100)        
+    : Math.round((1 - normalizedJaProb) * 100);
 
   return {
     id: hypothesis.id,
@@ -99,51 +109,24 @@ Antworte ausschließlich mit JA oder NEIN.`;
   };
 };
 
-const callMistral = async (prompt: string, chatContext: string) => {
-  // Mistral Integration via Standard-Fetch (OpenAI-kompatibel)
-  const apiKey = import.meta.env.VITE_MISTRAL_API_KEY || import.meta.env.VITE_API_KEY; 
-  const endpoint = "https://api.mistral.ai/v1/chat/completions";
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: "mistral-large-latest",
-      messages: [
-        { role: "system", content: prompt },
-        { role: "user", content: `Hier ist der Chatverlauf zur Analyse:\n\n${chatContext}` }
-      ],
-      response_format: { type: "json_object" }, // Mistral unterstützt JSON-Modus
-      temperature: 0
-    })
-  });
-
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(`Mistral API Error: ${err.message || response.statusText}`);
-  }
-
-  const result = await response.json();
-  const content = result.choices[0].message.content;
-  
-  // Mistral gibt oft ein Objekt zurück, das das Array enthält
-  const parsed = JSON.parse(content);
-  return Array.isArray(parsed) ? parsed : (parsed.results || parsed.analysis || []);
-};
-
-export const performForensicAnalysis = async (chatContext: string, provider: LLMProviderType = 'GEMINI_FLASH') => {
+export const performForensicAnalysis = async (
+  chatContext: string, 
+  provider: LLMProviderType = 'GEMINI_PRO',
+  apiKeys: { gemini?: string; openai?: string }
+) => {
   const systemPrompt = getSystemPrompt();
 
   if (provider === 'OPENAI_GPT4O') {
+    if (!apiKeys.openai) {
+      throw new Error('OpenAI API-Key fehlt. Bitte konfigurieren Sie Ihren API-Key.');
+    }
     const results = [];
     let completedCount = 0;
 
     for (const hypothesis of HYPOTHESES) {
       try {
-        const result = await callOpenAI(hypothesis, chatContext);
+        const result = await callOpenAI(hypothesis, chatContext, apiKeys.openai);
         results.push(result);
         completedCount++;
         console.log(`✓ Hypothese ${completedCount}/30 analysiert (ID: ${hypothesis.id})`);
@@ -172,19 +155,13 @@ export const performForensicAnalysis = async (chatContext: string, provider: LLM
     };
   }
 
-  if (provider === 'MISTRAL_LARGE') {
-    const data = await callMistral(systemPrompt, chatContext);
-    return {
-      data,
-      signalStability: 85, // Heuristischer Wert für Mistral
-      isLogprobBased: false,
-      provider
-    };
-  }
-
   // Gemini Path (Default)
-  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
-  const modelName = provider === 'GEMINI_PRO' ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
+  if (!apiKeys.gemini) {
+    throw new Error('Gemini API-Key fehlt. Bitte konfigurieren Sie Ihren API-Key.');
+  }
+  
+  const ai = new GoogleGenAI({ apiKey: apiKeys.gemini });
+  const modelName = 'gemini-3-pro-preview';
 
   const config = {
     temperature: 0,

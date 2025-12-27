@@ -6,17 +6,22 @@ import { HYPOTHESES } from './constants';
 import InputForm from './components/InputForm';
 import AnalysisDashboard from './components/AnalysisDashboard';
 import HypothesisList from './components/HypothesisList';
+import ApiKeyManager from './components/ApiKeyManager';
+import HypothesisEditor from './components/HypothesisEditor';
 
 const App: React.FC = () => {
   const [chatContent, setChatContent] = useState('');
   const [results, setResults] = useState<HypothesisResult[] | null>(null);
   const [signalStability, setSignalStability] = useState<number>(0);
   const [isLogprobBased, setIsLogprobBased] = useState<boolean>(false);
-  const [activeProvider, setActiveProvider] = useState<LLMProviderType>('GEMINI_FLASH');
+  const [activeProvider, setActiveProvider] = useState<LLMProviderType>('GEMINI_PRO');
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [apiKeys, setApiKeys] = useState<{ gemini?: string; openai?: string }>({});
+  const [customHypotheses, setCustomHypotheses] = useState<typeof HYPOTHESES | null>(null);
+  const [showHypothesisEditor, setShowHypothesisEditor] = useState(false);
 
   const analysisSteps = [
     { threshold: 15, text: 'Initialisiere Engine Pipeline...' },
@@ -54,7 +59,7 @@ const App: React.FC = () => {
     setActiveProvider(provider);
 
     try {
-      const response = await performForensicAnalysis(chatContent, provider);
+      const response = await performForensicAnalysis(chatContent, provider, apiKeys);
       const rawResults = response.data;
       
       setProgress(100);
@@ -62,7 +67,8 @@ const App: React.FC = () => {
       setSignalStability(response.signalStability);
       setIsLogprobBased(response.isLogprobBased);
       
-      const fullResults: HypothesisResult[] = HYPOTHESES.map(h => {
+      const hypothesesToUse = customHypotheses || HYPOTHESES;
+      const fullResults: HypothesisResult[] = hypothesesToUse.map(h => {
         const found = rawResults.find((r: any) => r.id === h.id);
         return {
           ...h,
@@ -125,12 +131,36 @@ const App: React.FC = () => {
           <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="text-center space-y-4">
               <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white">
-                Multi-Model <span className="text-blue-500">Forensik</span>
+                BYOK <span className="text-blue-500">Forensik</span>
               </h2>
               <p className="text-slate-400 text-lg max-w-2xl mx-auto font-medium">
-                Wählen Sie zwischen OpenAI GPT-4o (Logprobs-basiert), Google Gemini oder Mistral AI für maximale Flexibilität in der linguistischen Analyse.
+                Bring Your Own Key: Nutzen Sie Ihre eigenen API-Keys für Google Gemini Pro oder OpenAI GPT-4o.
               </p>
             </div>
+
+            <ApiKeyManager onKeysConfigured={setApiKeys} />
+
+            <div className="flex justify-center">
+              <button
+                onClick={() => setShowHypothesisEditor(true)}
+                className="text-xs text-blue-400 hover:text-blue-300 transition-colors uppercase tracking-wider font-bold flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Hypothesen bearbeiten
+              </button>
+            </div>
+
+            {showHypothesisEditor && (
+              <HypothesisEditor
+                onSave={(hypotheses) => {
+                  setCustomHypotheses(hypotheses);
+                  setShowHypothesisEditor(false);
+                }}
+                onCancel={() => setShowHypothesisEditor(false)}
+              />
+            )}
 
             <InputForm 
               value={chatContent} 
