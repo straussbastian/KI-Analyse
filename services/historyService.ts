@@ -48,6 +48,10 @@ export const saveAnalysisToHistory = (
   }
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+  
+  // Custom Event auslösen für UI-Update
+  window.dispatchEvent(new CustomEvent('history-update'));
+  
   return newEntry;
 };
 
@@ -66,10 +70,16 @@ export const deleteAnalysisFromHistory = (id: string): void => {
   const history = getAnalysisHistory();
   const filtered = history.filter(item => item.id !== id);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+  
+  // Custom Event auslösen für UI-Update
+  window.dispatchEvent(new CustomEvent('history-update'));
 };
 
 export const clearAnalysisHistory = (): void => {
   localStorage.removeItem(STORAGE_KEY);
+  
+  // Custom Event auslösen für UI-Update
+  window.dispatchEvent(new CustomEvent('history-update'));
 };
 
 export const getAnalysisById = (id: string): AnalysisHistory | null => {

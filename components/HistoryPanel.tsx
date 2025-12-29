@@ -14,6 +14,26 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ onLoadAnalysis, currentAnal
 
   useEffect(() => {
     loadHistory();
+    
+    // Storage Event Listener für Cross-Tab-Sync und Auto-Refresh
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'ki-analyse-history') {
+        loadHistory();
+      }
+    };
+    
+    // Custom Event für App-interne Updates
+    const handleHistoryUpdate = () => {
+      loadHistory();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('history-update', handleHistoryUpdate);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('history-update', handleHistoryUpdate);
+    };
   }, []);
 
   const loadHistory = () => {

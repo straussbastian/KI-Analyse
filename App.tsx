@@ -155,7 +155,7 @@ const App: React.FC = () => {
                   <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isLoading ? 'bg-blue-400' : 'bg-emerald-400'}`}></span>
                   <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${isLoading ? 'bg-blue-500' : 'bg-emerald-500'}`}></span>
                 </span>
-                <span className="text-[9px] text-slate-400 uppercase font-black tracking-widest">Multi-Engine v3.1</span>
+                <span className="text-[9px] text-slate-400 uppercase font-black tracking-widest">Multi-Engine v3.2</span>
               </div>
             </div>
           </div>
