@@ -1,12 +1,16 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# KI-Analyse - Forensic Linguist Analyst (BYOK) v3.2.0
 
-# KI-Analyse - Forensic Linguist Analyst (BYOK)
-
-Forensische Analyse von Chat-Konversationen zur Bewertung kognitiver Fähigkeiten mit **objektiver Logprobs-basierter Bewertung**.
+Forensische Analyse von Chat-Konversationen zur Bewertung kognitiver Fähigkeiten mit **objektiver Logprobs-basierter Bewertung**, **Analyse-Historie** und **PDF-Export**.
 
 🔐 **BYOK (Bring Your Own Key):** Ihre API-Keys werden nur lokal im Browser gespeichert und niemals an Server übertragen.
+
+## 🆕 **v3.2.0 Highlights**
+
+- 📚 **Analyse-Historie:** Alle Analysen automatisch speichern und vergleichen
+- 📄 **PDF-Export:** Professionelle Berichte mit Charts exportieren  
+- ⏱️ **Echter Progress:** Real-time Fortschritt bei OpenAI Logprobs-Analyse
+- 📊 **Statistik-Dashboard:** Übersicht aller Analysen mit Metriken
+- 🔄 **Vergleichsfunktion:** Alte Analysen mit einem Klick laden
 
 Die Anwendung analysiert Chat-Verläufe anhand von 30 Hypothesen in 6 Kategorien:
 
@@ -41,7 +45,9 @@ Die App läuft dann auf [http://localhost:3000](http://localhost:3000)
     "react": "^19.0.0",           // UI-Framework
     "react-dom": "^19.0.0",       // DOM-Rendering
     "@google/genai": "^1.34.0",   // Google Gemini API
-    "recharts": "^3.6.0"          // Chart-Bibliothek
+    "recharts": "^3.6.0",         // Chart-Bibliothek
+    "jspdf": "^2.5.2",            // PDF-Generierung
+    "html2canvas": "^1.4.1"       // Chart-zu-Bild Konvertierung
   },
   "devDependencies": {
     "vite": "^6.0.0",             // Build-Tool
@@ -55,6 +61,8 @@ Die App läuft dann auf [http://localhost:3000](http://localhost:3000)
 - **Vite 6.0.0** - Lightning-fast Build Tool
 - **@google/genai 1.34.0** - Google Gemini Pro Client
 - **Recharts 3.6.0** - React-Charts für Visualisierung
+- **jsPDF 2.5.2** - PDF-Berichtsgenerierung
+- **html2canvas 1.4.1** - Chart-zu-Bild Konvertierung
 - **TypeScript** - Typsichere Entwicklung
 - **Node.js >=22.11.0** - JavaScript Runtime
 
@@ -112,6 +120,53 @@ Die App läuft dann auf [http://localhost:3000](http://localhost:3000)
 - **Score:** Gewichtete Punkte basierend auf Confidence
 - **Evidenz:** Logprobs-Daten (JA/NEIN Wahrscheinlichkeiten)
 - **Reasoning:** Begründung des Modells
+
+### 6. Analyse-Historie nutzen
+**Automatisches Speichern:**
+- Jede Analyse wird automatisch nach Abschluss gespeichert
+- Max. 50 Analysen werden aufbewahrt (älteste werden entfernt)
+
+**Manuelles Speichern:**
+- **"Speichern" Button:** Manuelle Speicherung der aktuellen Analyse
+- **Statusanzeige:** "Gespeichert" zeigt, dass Analyse in Historie ist
+- **Feedback:** Visuelle Bestätigung nach erfolgreichem Speichern
+
+**Historie-Panel öffnen:**
+- Klick auf "Historie (X)" Button unten rechts
+- Zeigt alle gespeicherten Analysen
+
+**Funktionen:**
+- **Analyse laden:** Klick auf Eintrag lädt die Analyse wieder
+- **Statistik anzeigen:** "Statistik" Tab zeigt Übersicht
+- **Analysen löschen:** Einzelne oder alle Analysen entfernen
+- **Vergleich:** Alte Analysen mit aktuellen vergleichen
+
+**Gespeicherte Daten:**
+- Chat-Verlauf (erste 1000 Zeichen)
+- Alle 30 Ergebnisse mit Scores
+- Provider und Methode
+- Signal-Stabilität
+- Timestamp
+
+### 7. PDF-Export erstellen
+**Export durchführen:**
+1. Analyse abschließen
+2. "PDF Export" Button klicken (neben Report-Header)
+3. PDF wird automatisch heruntergeladen
+
+**PDF-Inhalt:**
+- Zusammenfassung mit Scores
+- Radar-Chart als Grafik
+- Kategorie-Scores mit Progress-Bars
+- Detaillierte TRUE/FALSE Ergebnisse
+- Metadaten (Provider, Methode, Datum)
+
+### 8. Echtzeit-Progress (OpenAI)
+**Bei Logprobs-Analyse:**
+- Zeigt "Analysiere Hypothese X/30 (ID: Y)"
+- Prozentsatz basiert auf echtem Fortschritt
+- Jeder der 30 API-Calls wird getrackt
+- Bei Gemini: Simulierter Progress (1 API-Call)
 
 ## 🐳 Docker Deployment
 
@@ -215,6 +270,29 @@ Benutzer geben ihre API-Keys direkt in der UI ein.
 - **Progress-Balken:** Confidence-Scores visuell dargestellt
 - **Responsive Design:** Optimal auf allen Geräten
 
+### 📚 Analyse-Historie
+- **Automatische Speicherung:** Jede Analyse wird in LocalStorage gespeichert
+- **Historie-Panel:** Übersicht aller gespeicherten Analysen mit Mini-Scores
+- **Vergleichsfunktion:** Alte Analysen mit einem Klick laden und vergleichen
+- **Statistik-Dashboard:** Gesamt-Analysen, Ø Stabilität, Provider-Nutzung
+- **Smart Management:** Max. 50 Analysen, älteste werden automatisch entfernt
+- **Kategorie-Vorschau:** Alle 6 Kategorien als Mini-Progress-Bars
+
+### 📄 PDF-Export
+- **Professionelle Berichte:** PDF-Export mit Dark Theme Design
+- **Chart-Integration:** Radar-Diagramme als Grafik eingebettet
+- **Multi-Page Layout:** Automatische Seitenumbrüche bei langen Analysen
+- **Detaillierte Ergebnisse:** TRUE/FALSE getrennt mit Evidenz
+- **Score-Übersicht:** Kategorie-Scores mit Progress-Bars
+- **Metadaten:** Provider, Methode, Stabilität, Timestamp
+
+### ⏱️ Echtzeit-Progress
+- **Real-time Updates:** Echter Fortschritt bei OpenAI Logprobs-Analyse
+- **Hypothesen-Tracking:** Zeigt "Analysiere Hypothese X/30 (ID: Y)"
+- **Prozentuale Anzeige:** Genauer Progress statt Simulation
+- **30 API-Calls:** Jede Hypothese einzeln getrackt
+- **Performance-Optimierung:** Callback-System für schnelle Updates
+
 ### Unterschied: Semantisch vs. Logprobs-basiert
 
 **Semantische Bewertung (Gemini Pro):**
@@ -243,7 +321,24 @@ Mehr Details: [LOGPROBS_EXPLAINED.md](LOGPROBS_EXPLAINED.md)
 
 ## 📝 Changelog
 
-### v3.1.0 (Latest) - December 2024
+### v3.2.0 (Latest) - December 2025
+**Major Features:**
+- ✅ **Analyse-Historie:** Alle Analysen automatisch in LocalStorage speichern
+- ✅ **PDF-Export:** Professionelle PDF-Berichte mit eingebetteten Grafiken
+- ✅ **Echter Progress:** Real-time Fortschrittsanzeige bei OpenAI Logprobs-Analyse
+- ✅ **Historie-Panel:** Übersicht, Vergleich und Statistik vergangener Analysen
+- ✅ **Chart-Integration:** Radar-Diagramme direkt in PDF exportieren
+- ✅ **Performance-Optimierung:** Echte Progress-Updates statt Simulation
+
+**Technical Improvements:**
+- LocalStorage-based analysis history with max 50 entries
+- HTML2Canvas integration for chart-to-PDF conversion
+- Progress callback system for real-time API feedback
+- Enhanced PDF layout with multi-page support
+- jspdf integration for professional report generation
+- History statistics and analytics dashboard
+
+### v3.1.0 - Earlier Version
 **Major Features:**
 - ✅ **BYOK-Architektur:** Vollständige Umstellung auf Bring Your Own Key
 - ✅ **Hypothesen-Editor:** Alle 30 Fragen direkt in der UI bearbeitbar
@@ -270,7 +365,6 @@ Mehr Details: [LOGPROBS_EXPLAINED.md](LOGPROBS_EXPLAINED.md)
 - [Logprobs Explained](LOGPROBS_EXPLAINED.md) - Technische Details zur objektiven Bewertung
 - [Deployment Guide](DEPLOYMENT.md) - Coolify & Docker Deployment
 - [GitHub Repository](https://github.com/straussbastian/KI-Analyse)
-- [AI Studio App](https://ai.studio/apps/drive/1vn7XZYOcQNHfPStKI-dNrcYeiqy2QlrG)
 
 ## 📄 Lizenz
 

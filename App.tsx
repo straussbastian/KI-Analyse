@@ -8,6 +8,10 @@ import AnalysisDashboard from './components/AnalysisDashboard';
 import HypothesisList from './components/HypothesisList';
 import ApiKeyManager from './components/ApiKeyManager';
 import HypothesisEditor from './components/HypothesisEditor';
+import HistoryPanel from './components/HistoryPanel';
+import ExportButton from './components/ExportButton';
+import SaveButton from './components/SaveButton';
+import { saveAnalysisToHistory, AnalysisHistory } from './services/historyService';
 
 const App: React.FC = () => {
   const [chatContent, setChatContent] = useState('');
@@ -22,6 +26,7 @@ const App: React.FC = () => {
   const [apiKeys, setApiKeys] = useState<{ gemini?: string; openai?: string }>({});
   const [customHypotheses, setCustomHypotheses] = useState<typeof HYPOTHESES | null>(null);
   const [showHypothesisEditor, setShowHypothesisEditor] = useState(false);
+  const [currentAnalysisId, setCurrentAnalysisId] = useState<string | undefined>(undefined);
 
   const analysisSteps = [
     { threshold: 15, text: 'Initialisiere Engine Pipeline...' },
@@ -59,7 +64,17 @@ const App: React.FC = () => {
     setActiveProvider(provider);
 
     try {
-      const response = await performForensicAnalysis(chatContent, provider, apiKeys);
+      const response = await performForensicAnalysis(
+        chatContent, 
+        provider, 
+        apiKeys,
+        (current, total, hypothesisId) => {
+          // Echter Progress für OpenAI Logprobs
+          const percentage = Math.round((current / total) * 100);
+          setProgress(percentage);
+          setProgressText(`Analysiere Hypothese ${current}/${total} (ID: ${hypothesisId})...`);
+        }
+      );
       const rawResults = response.data;
       
       setProgress(100);
@@ -80,6 +95,17 @@ const App: React.FC = () => {
       });
       
       setResults(fullResults);
+      
+      // Speichere in Historie
+      const savedAnalysis = saveAnalysisToHistory(
+        chatContent,
+        fullResults,
+        response.signalStability,
+        response.isLogprobBased,
+        provider
+      );
+      setCurrentAnalysisId(savedAnalysis.id);
+      
       setTimeout(() => {
         document.getElementById('analysis-results')?.scrollIntoView({ behavior: 'smooth' });
       }, 300);
@@ -96,7 +122,20 @@ const App: React.FC = () => {
     setChatContent('');
     setProgress(0);
     setError(null);
+    setCurrentAnalysisId(undefined);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLoadAnalysis = (history: AnalysisHistory) => {
+    setChatContent(history.chatContent);
+    setResults(history.results);
+    setSignalStability(history.signalStability);
+    setIsLogprobBased(history.isLogprobBased);
+    setActiveProvider(history.provider);
+    setCurrentAnalysisId(history.id);
+    setTimeout(() => {
+      document.getElementById('analysis-results')?.scrollIntoView({ behavior: 'smooth' });
+    }, 300);
   };
 
   return (
@@ -181,8 +220,26 @@ const App: React.FC = () => {
                   <span className="text-[10px] font-black px-2 py-0.5 rounded bg-slate-800 text-blue-400 border border-slate-700 uppercase">{activeProvider}</span>
                 </div>
               </div>
-              <div className="px-5 py-2.5 bg-blue-600/10 border border-blue-500/30 rounded-full">
-                <span className="text-blue-400 text-xs font-black tracking-widest uppercase">Linguistic Proof Protocol</span>
+              <div className="flex items-center gap-3">
+                <SaveButton
+                  results={results}
+                  signalStability={signalStability}
+                  isLogprobBased={isLogprobBased}
+                  provider={activeProvider}
+                  chatContent={chatContent}
+                  currentAnalysisId={currentAnalysisId}
+                  onSave={(id) => setCurrentAnalysisId(id)}
+                />
+                <ExportButton
+                  results={results}
+                  signalStability={signalStability}
+                  isLogprobBased={isLogprobBased}
+                  provider={activeProvider}
+                  chatContent={chatContent}
+                />
+                <div className="px-5 py-2.5 bg-blue-600/10 border border-blue-500/30 rounded-full">
+                  <span className="text-blue-400 text-xs font-black tracking-widest uppercase">Linguistic Proof Protocol</span>
+                </div>
               </div>
             </div>
 
@@ -204,6 +261,11 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      <HistoryPanel 
+        onLoadAnalysis={handleLoadAnalysis}
+        currentAnalysisId={currentAnalysisId}
+      />
     </div>
   );
 };

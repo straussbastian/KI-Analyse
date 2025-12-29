@@ -113,7 +113,8 @@ Antworte ausschließlich mit JA oder NEIN.`;
 export const performForensicAnalysis = async (
   chatContext: string, 
   provider: LLMProviderType = 'GEMINI_PRO',
-  apiKeys: { gemini?: string; openai?: string }
+  apiKeys: { gemini?: string; openai?: string },
+  onProgress?: (current: number, total: number, hypothesisId: number) => void
 ) => {
   const systemPrompt = getSystemPrompt();
 
@@ -130,6 +131,10 @@ export const performForensicAnalysis = async (
         results.push(result);
         completedCount++;
         console.log(`✓ Hypothese ${completedCount}/30 analysiert (ID: ${hypothesis.id})`);
+        
+        if (onProgress) {
+          onProgress(completedCount, HYPOTHESES.length, hypothesis.id);
+        }
       } catch (error: any) {
         console.error(`✗ Fehler bei Hypothese ${hypothesis.id}:`, error.message);
         results.push({
@@ -139,6 +144,11 @@ export const performForensicAnalysis = async (
           evidence: 'Fehler bei der Analyse',
           reasoning: error.message
         });
+        completedCount++;
+        
+        if (onProgress) {
+          onProgress(completedCount, HYPOTHESES.length, hypothesis.id);
+        }
       }
     }
 
